@@ -1,0 +1,1270 @@
+html
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Michael PC — Prototype 0.9.10</title>
+<!--
+  Michael PC — Prototype 0.9.10
+  - Финальная картинка в стиле веб-камеры (шум, полосы, REC, LIVE, таймер, виньетка)
+  - Звук «тук» при появлении я вижу тебя.exe (не чаще 1 раза в 30 мс)
+  - Уровни 1-4, финал, всё остальное из v0.9.9
+-->
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{font-family:Tahoma,"MS Sans Serif",Arial,sans-serif;background:#008080;color:#111}
+button,input,textarea{font:inherit}
+button,input,.icon,.titlebar,.file,.row{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M2 1v18l5-4 3 8 3-1-3-8h7z' fill='white' stroke='black' stroke-width='2'/%3E%3C/svg%3E") 2 1,auto}
+.hidden{display:none!important}
+
+#login{position:fixed;inset:0;background:#008080;display:flex;align-items:center;justify-content:center;z-index:500}
+.login-window,.window,.assistant{background:#c0c0c0;border:2px outset #fff;box-shadow:3px 3px 0 #222}
+.login-window{width:500px}
+.titlebar{height:30px;background:linear-gradient(90deg,#000080,#1084d8);color:#fff;display:flex;align-items:center;padding:4px 7px;font-weight:bold;user-select:none}
+.caption{flex:1}
+.winbuttons{display:flex;gap:3px}
+.winbutton{width:22px;height:20px;border:2px outset #fff;background:#c0c0c0;color:#111;font-weight:bold;padding:0;line-height:13px}
+.winbutton:active{border-style:inset}
+.login-body{padding:22px}
+.logo{font-size:29px;font-weight:bold}
+.sub{font-size:12px;color:#444;margin:5px 0 20px}
+label{display:block;font-size:13px;margin:8px 0 4px}
+input{height:29px;width:100%;border:2px inset #fff;background:#fff;padding:3px 6px;outline:0}
+.actions{text-align:right;margin-top:17px}
+.oldbtn{background:#c0c0c0;border:2px outset #fff;padding:5px 15px;min-width:88px}
+.oldbtn:active{border-style:inset}
+#error{height:18px;color:#a00000;font-size:12px;margin-top:8px}
+
+#desktop{position:fixed;inset:0;background:#008080;z-index:1}
+.wallpaper{position:absolute;inset:0 0 43px 0;overflow:hidden;background:#7bb9d8}
+.skyglow{position:absolute;inset:0;background:linear-gradient(#6eaecf 0 45%,#9acb69 45% 100%)}
+.sun{position:absolute;width:90px;height:90px;border-radius:50%;background:#ffd66b;right:13%;top:11%;box-shadow:0 0 25px #ffe8a1}
+.cloud{position:absolute;height:26px;width:110px;background:#fff;border-radius:18px;opacity:.82}
+.cloud:before,.cloud:after{content:"";position:absolute;background:#fff;border-radius:50%}
+.cloud:before{width:48px;height:48px;left:18px;top:-23px}.cloud:after{width:58px;height:58px;left:50px;top:-30px}
+.c1{top:12%;left:14%}.c2{top:24%;right:23%;transform:scale(.75)}
+.backforest{position:absolute;left:0;right:0;bottom:30%;height:25%;background:repeating-linear-gradient(80deg,#346f42 0 12px,#2c633a 12px 22px,#3e7947 22px 31px)}
+.field{position:absolute;left:0;right:0;bottom:0;height:42%;background:#79b957}
+.field:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(7deg,transparent 0 22px,rgba(255,255,255,.12) 23px 25px),repeating-linear-gradient(93deg,transparent 0 30px,rgba(44,107,44,.12) 31px 33px)}
+.path{position:absolute;left:47%;bottom:-5%;width:20%;height:60%;background:#c7b28a;transform:perspective(400px) rotateX(25deg) rotateZ(-2deg);border-left:4px solid #b39c76;border-right:4px solid #b39c76}
+.fence{position:absolute;bottom:27%;left:8%;width:33%;height:42px;border-top:5px solid #76583d;border-bottom:5px solid #76583d;opacity:.9}
+.fence:after{content:"";position:absolute;inset:-15px 0 -15px;background:repeating-linear-gradient(90deg,transparent 0 25px,#76583d 26px 31px,transparent 32px 55px)}
+.bush{position:absolute;bottom:25%;width:120px;height:55px;background:#397c3c;border-radius:50%;box-shadow:35px -15px #438a43,70px 0 #326f37}
+.b1{left:17%}.b2{right:13%;transform:scale(.8)}
+.flower{position:absolute;bottom:20%;font-size:0;width:5px;height:15px;background:#3b7d35}
+.flower:before{content:"";position:absolute;left:-5px;top:-4px;width:14px;height:8px;background:#e8d05a;border-radius:50%}
+.f1{left:25%}.f2{left:30%}.f3{right:27%}.f4{right:34%}
+.house{position:absolute;right:5%;bottom:31%;width:105px;height:80px;background:#d7c19b;border:4px solid #73573f}
+.house:before{content:"";position:absolute;left:-15px;top:-65px;border-left:65px solid transparent;border-right:65px solid transparent;border-bottom:50px solid #754d43}
+.house:after{content:"";position:absolute;left:42px;bottom:0;width:22px;height:45px;background:#674b39}
+.chimney{position:absolute;right:22px;top:-37px;width:16px;height:35px;background:#7b5a4c}
+
+.desktop-icons{position:absolute;left:13px;top:12px;width:102px;display:grid;gap:8px;max-height:calc(100% - 70px);overflow-y:auto;overflow-x:hidden;padding-right:4px}
+.desktop-icons::-webkit-scrollbar{width:6px}
+.desktop-icons::-webkit-scrollbar-thumb{background:#000080;border-radius:3px}
+.icon{width:98px;color:#fff;text-shadow:1px 1px #000;text-align:center;padding:5px;border:1px dotted transparent;user-select:none}
+.icon:hover{background:rgba(0,0,128,.22);border-color:#fff}
+.pic{height:48px;font-size:36px;display:flex;align-items:center;justify-content:center}
+.icon span{font-size:12px}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:43px;background:#c0c0c0;border-top:2px solid #fff;display:flex;align-items:center;padding:3px;z-index:100;gap:4px}
+.start{height:35px;min-width:88px;font-weight:bold;border:2px outset #fff;background:#c0c0c0}
+.task{height:33px;min-width:120px;text-align:left;border:2px inset #fff;background:#c0c0c0}
+.tray-helper{height:35px;width:38px;font-size:18px;border:2px outset #fff;background:#c0c0c0;line-height:1}
+.tray-helper:active{border-style:inset}
+.clock{margin-left:auto;border:2px inset #fff;height:33px;min-width:92px;text-align:center;padding:7px 8px;font-size:12px}
+
+.window{position:absolute;width:600px;height:410px;left:200px;top:90px;z-index:10}
+.content{height:calc(100% - 30px);padding:10px;overflow:auto;background:#c0c0c0}
+.inset{background:#fff;border:2px inset #fff;padding:10px}
+.row{background:#fff;border:1px solid #ddd;border-bottom-color:#888;padding:8px;margin-bottom:5px}
+.row:hover{background:#000080;color:#fff}
+.file{display:inline-flex;width:128px;height:88px;margin:5px;background:#c0c0c0;border:2px outset #fff;align-items:center;justify-content:center;flex-direction:column;text-align:center;user-select:none}
+.file:active{border-style:inset}
+.file .ficon{font-size:32px}
+.file .fname{font-size:11px;padding:0 3px;line-height:1.1}
+.muted{color:#666;font-size:12px}
+pre{white-space:pre-wrap;font-family:"Courier New",monospace}
+.browserbar{display:flex;gap:5px}
+.browserbar input{flex:1}
+.site{font-family:"Courier New",monospace;line-height:1.55}
+.site h2{font-size:18px}
+.site hr{border:0;border-top:1px solid #aaa}
+.terminal{height:100%;background:#050505;color:#b8ffb8;padding:10px;font-family:"Courier New",monospace}
+.terminal input{background:#050505;color:#b8ffb8;border:0;outline:0;width:auto}
+#toast{position:absolute;right:25px;top:18px;background:#ffffdf;border:1px solid #000;padding:7px 10px;z-index:100;box-shadow:2px 2px #555;display:none}
+
+.assistant{position:absolute;right:25px;bottom:57px;width:350px;height:245px;z-index:50}
+.assistant-body{padding:12px;font-size:13px;line-height:1.45}
+.face{float:left;width:82px;height:82px;margin-right:13px;background:#ffd92f;border:3px outset #fff;position:relative;image-rendering:pixelated;transition:filter .15s,transform .15s;overflow:hidden}
+.eye{position:absolute;top:27px;width:9px;height:13px;background:#111;border:1px solid #111}
+.eye-l{left:20px}.eye-r{right:20px}
+.brow{position:absolute;top:19px;width:19px;height:4px;background:#111;transform-origin:center;transition:transform .2s,top .2s}
+.brow-l{left:15px}.brow-r{right:15px}
+.face-mouth{position:absolute;left:27px;top:50px;width:28px;height:7px;background:#111;border-radius:0 0 10px 10px;transition:all .12s}
+.face.talking .face-mouth{height:18px;top:45px;border-radius:50%}
+.face.worried .brow-l{transform:rotate(18deg);top:16px}
+.face.worried .brow-r{transform:rotate(-18deg);top:16px}
+.face.worried .face-mouth{width:25px;left:29px;height:6px;top:54px;border-radius:50%;transform:rotate(180deg)}
+.face.angry{filter:saturate(1.15) brightness(.98)}
+.face.angry .brow-l{transform:rotate(-23deg);top:22px}
+.face.angry .brow-r{transform:rotate(23deg);top:22px}
+.face.angry .eye{top:29px;height:10px}
+.face.angry .face-mouth{height:13px;top:49px;border-radius:50% 50% 3px 3px}
+.face.panic{animation:shake .09s infinite}
+.face.panic .brow-l{transform:rotate(25deg);top:14px}
+.face.panic .brow-r{transform:rotate(-25deg);top:14px}
+.face.panic .eye{height:16px;top:25px}
+.face.panic .face-mouth{height:23px;top:45px;border-radius:50%}
+.face.dark{background:#000;animation:darkPulse .6s infinite}
+.face.dark .dark-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:screen}
+@keyframes darkPulse{50%{filter:brightness(1.5) contrast(1.4)}}
+@keyframes shake{50%{transform:translate(2px,-1px)}}
+.assistantText{min-height:90px}
+.assistant-stage{clear:both;margin-top:12px;font-size:11px;color:#555}
+
+.camera{background:#000;border:4px inset #777;height:300px;position:relative;overflow:hidden}
+.camera-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.camera-noise{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 2px,transparent 2px 5px);pointer-events:none}
+.camera-glitch{position:absolute;inset:0;background:linear-gradient(transparent 48%,rgba(255,255,255,.05) 49%,transparent 50%);background-size:100% 12px;opacity:.35;animation:scan 5s linear infinite;pointer-events:none}
+.camera-rec{position:absolute;right:12px;top:9px;color:#ff4a4a;font:12px "Courier New",monospace;text-shadow:1px 1px #000}
+@keyframes scan{from{transform:translateY(-30px)}to{transform:translateY(30px)}}
+.camera-status{font-size:11px;margin-top:6px;color:#444}
+
+.game{background:#101010;color:#eee;border:3px inset #777;position:relative;overflow:hidden}
+.game-controls{font-size:11px;margin-top:5px}
+.board{background:#111;border:3px inset #777;margin:auto;display:block}
+.score{font-size:12px;margin-bottom:5px}
+
+#bsod{position:fixed;inset:0;background:#0000aa;color:#fff;z-index:10000;font-family:"Courier New",monospace;padding:8%;display:flex;flex-direction:column;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#bsod.show{opacity:1;pointer-events:auto}
+.bsodbox{max-width:900px;font-size:18px;line-height:1.55}
+.bsodtitle{font-size:34px;margin-bottom:20px}
+.bsodbtn{background:#aaa;color:#000;border:2px outset #fff;padding:7px 16px;font-family:inherit;margin-top:25px;width:max-content}
+.bsodbtn.broken{animation:bsodBroken .12s 4}
+@keyframes bsodBroken{50%{transform:translate(-3px,2px) rotate(-1deg)}}
+
+#desktop.crashing{animation:crashDrop .8s cubic-bezier(.7,0,1,1) forwards;transform-origin:bottom right}
+@keyframes crashDrop{0%{transform:translate(0,0) rotate(0deg) scale(1);filter:none}55%{transform:translate(30px,25px) rotate(1deg) scale(.98);filter:brightness(.8)}100%{transform:translate(100vw,100vh) rotate(6deg) scale(.72);filter:brightness(0)}}
+body.crashed{overflow:hidden}
+
+#bootScreen{position:fixed;inset:0;background:#000;color:#ddd;z-index:20000;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:"Courier New",monospace;opacity:0;pointer-events:none;transition:opacity .4s}
+#bootScreen.show{opacity:1;pointer-events:auto}
+.boot-logo{font-family:Arial,sans-serif;font-weight:bold;font-size:42px;letter-spacing:3px;color:#e7e7e7}
+.boot-company{font-size:15px;margin-top:8px;color:#999;letter-spacing:2px}
+.boot-spinner{width:26px;height:26px;border:3px solid #333;border-top-color:#ddd;border-radius:50%;margin-top:35px;animation:spin 1s linear infinite}
+.boot-spinner.fast{animation-duration:.35s}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.archive-list{display:flex;flex-direction:column;gap:8px}
+.archive-list button{padding:7px;text-align:left}
+.archive-hint{margin-top:12px;color:#666;font-size:11px}
+.paper{background:#eee9d8;color:#222;border:1px solid #777;padding:16px;min-height:150px;font-family:"Courier New",monospace}
+.photo-placeholder{height:260px;background:#111;color:#aaa;display:flex;align-items:center;justify-content:center;text-align:center}
+
+.doc-viewer{display:flex;flex-direction:column;height:100%}
+.doc-toolbar{display:flex;gap:5px;align-items:center;padding:4px 0;border-bottom:2px groove #fff;margin-bottom:6px}
+.doc-toolbar button{min-width:38px}
+.doc-toolbar .zoomval{margin-left:auto;font-size:12px;color:#333;min-width:60px;text-align:right}
+.doc-stage{flex:1;background:#555;border:2px inset #fff;overflow:hidden;position:relative;cursor:grab;min-height:120px}
+.doc-stage.dragging{cursor:grabbing}
+.doc-img{position:absolute;left:0;top:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.doc-progress{position:absolute;left:0;right:0;bottom:0;height:14px;background:#c0c0c0;border-top:1px solid #888;display:flex;align-items:center;padding:0 4px;font-size:10px;color:#222;gap:6px}
+.doc-progress-bar{flex:1;height:8px;background:#fff;border:1px solid #777;overflow:hidden}
+.doc-progress-fill{height:100%;width:0;background:#000080;transition:width .12s linear}
+.doc-status{font-size:11px;color:#333;margin-top:6px;min-height:14px}
+
+.paint-toolbar{display:flex;gap:4px;align-items:center;padding:4px 0;border-bottom:2px groove #fff;margin-bottom:6px;flex-wrap:wrap}
+.paint-toolbar button{min-width:32px;padding:3px 6px}
+.paint-canvas{border:2px inset #fff;background:#fff;cursor:crosshair;display:block}
+.paint-colors{display:flex;gap:3px;margin-left:auto}
+.paint-color{width:22px;height:22px;border:2px outset #fff;cursor:pointer}
+.paint-color.active{border-style:inset}
+
+.calc{background:#c0c0c0;padding:8px;width:100%}
+.calc-display{background:#fff;border:2px inset #fff;padding:8px;text-align:right;font-family:"Courier New",monospace;font-size:22px;min-height:38px;margin-bottom:6px;overflow:hidden;word-break:break-all}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.calc-grid button{height:38px;border:2px outset #fff;background:#c0c0c0;font-size:15px}
+.calc-grid button:active{border-style:inset}
+.calc-grid button.op{background:#e0e0e0}
+
+#virus-layer{position:fixed;inset:0;z-index:9000;pointer-events:none;overflow:hidden}
+.virus-sandwich{position:absolute;object-fit:contain;image-rendering:auto;filter:drop-shadow(2px 2px 3px rgba(0,0,0,.4));animation:sandwichPop .18s ease-out}
+@keyframes sandwichPop{0%{transform:scale(0) rotate(-10deg)}80%{transform:scale(1.15) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+
+#virusWarn{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+#virusWarn.show{opacity:1;pointer-events:auto}
+.virusWarn-box{background:#c0c0c0;border:3px outset #fff;padding:28px 40px;box-shadow:5px 5px 0 #000;text-align:center;max-width:600px}
+.virusWarn-text{font-family:Tahoma,Arial,sans-serif;font-weight:bold;font-size:36px;color:#a00000;letter-spacing:2px;animation:warnBlink .4s infinite}
+@keyframes warnBlink{50%{opacity:.55}}
+.virusWarn-sub{font-size:12px;color:#333;margin-top:14px}
+.virusWarn-slider{margin-top:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:#111}
+.virusWarn-slider input[type=range]{flex:1;height:22px}
+.virusWarn-vol{min-width:44px;text-align:right;font-weight:bold;color:#000080}
+.virusWarn-btn{margin-top:20px;padding:8px 24px;font-size:14px;border:2px outset #fff;background:#c0c0c0;font-weight:bold}
+
+#lupaWin{position:fixed;width:280px;height:280px;left:200px;top:150px;z-index:7000;display:none;flex-direction:column;border:2px outset #fff;background:transparent}
+#lupaWin.show{display:flex}
+#lupaWin .lupa-title{height:26px;background:linear-gradient(90deg,#000080,#1084d8);color:#fff;font-weight:bold;font-size:12px;padding:4px 6px;display:flex;align-items:center;user-select:none;cursor:move;border-bottom:2px solid #c0c0c0}
+#lupaWin .lupa-title .lupa-cap{flex:1}
+#lupaWin .lupa-close{width:20px;height:18px;border:2px outset #fff;background:#c0c0c0;color:#111;font-weight:bold;font-size:12px;padding:0;line-height:12px}
+#lupaWin .lupa-close:active{border-style:inset}
+#lupaWin .lupa-body{flex:1;background:transparent;border:2px solid #888;box-shadow:inset 0 0 24px rgba(0,0,0,.35);position:relative}
+
+.hidden-text{position:absolute;color:rgba(255,255,255,0);font-weight:bold;font-size:20px;letter-spacing:2px;text-shadow:0 0 0 rgba(0,0,0,0);transition:color .25s, text-shadow .25s;pointer-events:none;user-select:none;z-index:5}
+.hidden-text.revealed{color:#fff;text-shadow:0 0 6px #000,0 0 14px #000, 1px 1px 0 #000}
+
+.sect-site{background:#1a0000;color:#a80000;font-family:"Courier New",monospace;height:100%;overflow:auto;position:relative;padding:30px 40px;animation:sectFlicker 4s infinite}
+@keyframes sectFlicker{0%,100%{filter:brightness(1)}47%{filter:brightness(1)}48%{filter:brightness(1.15) saturate(1.2)}49%{filter:brightness(.85)}50%{filter:brightness(1)}}
+.sect-site h1{text-align:center;color:#d02020;font-size:28px;letter-spacing:6px;margin:0 0 20px 0;text-shadow:0 0 8px #800000}
+.sect-symbol{position:absolute;color:#5a0000;font-size:60px;opacity:.35;pointer-events:none;user-select:none}
+.sect-text{color:#a02020;font-size:15px;line-height:1.9;letter-spacing:2px;margin:30px 0;word-break:break-all}
+.sect-bin{color:#c04040;font-family:"Courier New",monospace;font-size:13px;line-height:1.7;letter-spacing:2px;margin:20px 0;word-break:break-all}
+.sect-braille{color:#c04040;font-family:"Courier New",monospace;font-size:22px;line-height:2;letter-spacing:4px;margin:30px 0;text-align:center;word-break:break-word}
+.sect-form{display:flex;gap:8px;margin-top:30px;justify-content:center}
+.sect-form input{background:#0a0000;border:2px inset #5a0000;color:#d02020;padding:8px 12px;font-family:"Courier New",monospace;font-size:16px;letter-spacing:3px;width:280px;outline:0}
+.sect-form input.wrong{color:#ff0000 !important;border-color:#ff0000;text-shadow:0 0 8px #ff0000}
+.sect-form button{background:#3a0000;color:#d02020;border:2px outset #800000;padding:8px 20px;font-family:"Courier New",monospace;font-size:14px;letter-spacing:2px;font-weight:bold}
+.sect-form button:active{border-style:inset}
+.sect-msg{text-align:center;margin-top:20px;color:#a02020;font-size:14px;letter-spacing:2px;min-height:20px}
+.sect-cursor{display:inline-block;width:10px;height:16px;background:#d02020;margin-left:4px;vertical-align:middle;animation:blink .8s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.sect-site.glitchy{animation:sectFlicker 1.2s infinite, glitchShift .35s infinite}
+@keyframes glitchShift{0%{transform:translate(0,0)}20%{transform:translate(-3px,1px)}40%{transform:translate(2px,-2px)}60%{transform:translate(-1px,2px)}80%{transform:translate(3px,1px)}100%{transform:translate(0,0)}}
+.sect-site.glitchy h1{animation:glitchText .6s infinite}
+@keyframes glitchText{0%,100%{transform:translate(0)}50%{transform:translate(-2px,2px); text-shadow:0 0 8px #d02020, 2px 2px 0 #500}}
+.sect-site.glitchy2{animation:sectFlicker .6s infinite, glitchShift .18s infinite}
+.sect-site.glitchy2 h1{animation:glitchText .3s infinite}
+
+.eye-icon{animation:eyeShake .12s 4}
+@keyframes eyeShake{0%{transform:translate(0,0)}25%{transform:translate(-4px,2px)}50%{transform:translate(4px,-2px)}75%{transform:translate(-2px,-2px)}100%{transform:translate(0,0)}}
+
+/* ФИНАЛ */
+#finalBlack{position:fixed;inset:0;background:#000;z-index:15000;display:none}
+#finalBlack.show{display:block}
+
+#finalText{position:fixed;inset:0;background:#000;color:#a00000;z-index:16000;display:none;align-items:center;justify-content:center;font-family:"Courier New",monospace;font-size:52px;font-weight:bold;letter-spacing:6px;text-align:center;padding:40px;text-shadow:0 0 20px #ff0000, 0 0 40px #800000}
+#finalText.show{display:flex}
+
+#finalCamera{position:fixed;inset:0;background:#000;z-index:17000;display:none;align-items:center;justify-content:center;flex-direction:column}
+#finalCamera.show{display:flex}
+#finalCamera .cam-wrap{position:relative;width:80vw;max-width:1100px;aspect-ratio:4/3;background:#000;overflow:hidden;box-shadow:0 0 60px #000, inset 0 0 80px rgba(0,0,0,.7);animation:camShake .06s infinite}
+@keyframes camShake{0%{transform:translate(0,0)}25%{transform:translate(-2px,1px)}50%{transform:translate(2px,-1px)}75%{transform:translate(-1px,-2px)}100%{transform:translate(0,0)}}
+#finalCamera .cam-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:contrast(1.1) brightness(.95) saturate(.85)}
+#finalCamera .cam-noise{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px),repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 4px);mix-blend-mode:screen;pointer-events:none;animation:camNoise .12s steps(2) infinite;opacity:.55}
+@keyframes camNoise{0%{transform:translate(0,0)}50%{transform:translate(-2px,1px)}100%{transform:translate(1px,-1px)}}
+#finalCamera .cam-scan{position:absolute;left:0;right:0;height:60px;background:linear-gradient(transparent, rgba(255,255,255,.08), transparent);pointer-events:none;animation:camScan 3s linear infinite}
+@keyframes camScan{from{top:-60px}to{top:100%}}
+#finalCamera .cam-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.75) 100%);pointer-events:none}
+#finalCamera .cam-rec{position:absolute;top:14px;left:18px;color:#ff2020;font:bold 18px "Courier New",monospace;letter-spacing:2px;text-shadow:0 0 10px #ff0000;animation:recBlink 1s steps(1) infinite;display:flex;align-items:center;gap:8px}
+#finalCamera .cam-rec:before{content:"●";font-size:22px;animation:recBlink 1s steps(1) infinite}
+@keyframes recBlink{50%{opacity:.25}}
+#finalCamera .cam-live{position:absolute;top:14px;right:18px;color:#fff;font:bold 16px "Courier New",monospace;letter-spacing:2px;text-shadow:0 0 6px #000, 0 0 12px #000}
+#finalCamera .cam-time{position:absolute;bottom:14px;right:18px;color:#fff;font:14px "Courier New",monospace;letter-spacing:1px;text-shadow:0 0 6px #000}
+
+#finalEnd{position:fixed;inset:0;background:#000;color:#fff;z-index:18000;display:none;align-items:center;justify-content:center;font-family:"Courier New",monospace;font-size:42px;letter-spacing:8px;text-align:center}
+#finalEnd.show{display:flex}
+</style>
+</head>
+<body>
+
+<div id="login">
+ <div class="login-window">
+  <div class="titlebar"><span class="caption">MICHAEL-PC — Вход в систему</span><div class="winbuttons"><button class="winbutton">_</button><button class="winbutton">×</button></div></div>
+  <div class="login-body">
+   <div class="logo">Michael PC</div><div class="sub">Персональный компьютер // восстановленный экземпляр</div>
+   <label>Имя пользователя</label><input id="user" autocomplete="off">
+   <label>Пароль</label><input id="pass" type="password" autocomplete="off">
+   <div class="actions"><button class="oldbtn" id="loginBtn">Войти</button></div>
+   <div id="error"></div>
+  </div>
+ </div>
+</div>
+
+<div id="desktop" class="hidden">
+ <div class="wallpaper">
+  <div class="skyglow"></div><div class="sun"></div><div class="cloud c1"></div><div class="cloud c2"></div>
+  <div class="backforest"></div><div class="field"></div><div class="path"></div><div class="fence"></div>
+  <div class="bush b1"></div><div class="bush b2"></div>
+  <div class="flower f1"></div><div class="flower f2"></div><div class="flower f3"></div><div class="flower f4"></div>
+  <div class="house"><div class="chimney"></div></div>
+ </div>
+
+ <div class="hidden-text" id="ht1" style="left:320px; top:60px;">Ты уже был здесь.</div>
+ <div class="hidden-text" id="ht2" style="left:600px; top:280px;">00:18</div>
+ <div class="hidden-text" id="ht3" style="left:900px; top:520px;">ПЕЛЬМЕННОВ</div>
+
+ <div class="desktop-icons" id="desktopIcons">
+  <div class="icon" data-app="computer"><div class="pic">🖥️</div><span>Мой компьютер</span></div>
+  <div class="icon" data-app="archive"><div class="pic">🗄️</div><span>Архив владельца</span></div>
+  <div class="icon" data-app="receipt"><div class="pic">🧾</div><span>Чек</span></div>
+  <div class="icon" data-app="mail"><div class="pic">✉️</div><span>Почта</span></div>
+  <div class="icon" data-app="files"><div class="pic">📁</div><span>Файлы</span></div>
+  <div class="icon" data-app="browser"><div class="pic">🌐</div><span>Браузер</span></div>
+  <div class="icon" data-app="notes"><div class="pic">📝</div><span>Блокнот</span></div>
+  <div class="icon" data-app="camera"><div class="pic">📷</div><span>Веб-камера</span></div>
+  <div class="icon" data-app="paint"><div class="pic">🎨</div><span>Paint</span></div>
+  <div class="icon" data-app="calc"><div class="pic">🧮</div><span>Калькулятор</span></div>
+  <div class="icon" data-app="games"><div class="pic">🎮</div><span>Игры</span></div>
+  <div class="icon" data-app="terminal"><div class="pic">▣</div><span>Терминал</span></div>
+  <div class="icon" data-app="settings"><div class="pic">⚙️</div><span>Настройки</span></div>
+  <div class="icon" data-app="trash"><div class="pic">🗑️</div><span>Корзина</span></div>
+  <div class="icon" data-app="magnifier"><div class="pic">🔍</div><span>Лупа</span></div>
+ </div>
+
+ <div id="assistant" class="assistant">
+  <div class="titlebar"><span class="caption">Помощник системы</span><div class="winbuttons"><button class="winbutton" id="assistantClose">×</button></div></div>
+  <div class="assistant-body">
+   <div id="face" class="face"><div class="brow brow-l"></div><div class="brow brow-r"></div><div class="eye eye-l"></div><div class="eye eye-r"></div><div class="face-mouth"></div></div>
+   <div id="assistantText" class="assistantText"></div>
+   <div class="assistant-stage" id="assistantStage">Состояние: спокойно</div>
+   <button class="oldbtn" id="assistantHelp">Подсказка</button>
+  </div>
+ </div>
+
+ <div id="toast"></div>
+
+ <div class="taskbar">
+  <button class="start" id="startBtn">▣ Пуск</button>
+  <button class="tray-helper" id="helperBtn" title="Вызвать помощника">🙂</button>
+  <button class="task" id="mailTask">✉ Почта</button>
+  <div class="clock" id="clock"></div>
+ </div>
+</div>
+
+<div id="lupaWin">
+  <div class="lupa-title" id="lupaTitle">
+    <span class="lupa-cap">Лупа</span>
+    <button class="lupa-close" id="lupaClose">×</button>
+  </div>
+  <div class="lupa-body"></div>
+</div>
+
+<div id="virusWarn">
+  <div class="virusWarn-box">
+    <div class="virusWarn-text">СЕЙЧАС БУДЕТ ГРОМКО!</div>
+    <div class="virusWarn-sub">Рекомендуется уменьшить громкость.</div>
+    <div class="virusWarn-slider">
+      <span>Громкость:</span>
+      <input type="range" id="virusVol" min="0" max="100" value="50">
+      <span class="virusWarn-vol" id="virusVolVal">50%</span>
+    </div>
+    <button class="virusWarn-btn" id="virusWarnOk">ОК</button>
+  </div>
+</div>
+
+<div id="bsod">
+ <div class="bsodbox">
+  <div class="bsodtitle">MICHAEL-PC</div>
+  <div>КРИТИЧЕСКАЯ ОШИБКА</div>
+  <br>
+  <div><b>SANDWICH.EXE</b> заразил систему.</div>
+  <div>Все процессы заражены.</div>
+  <div>Восстановление невозможно.</div>
+  <br>
+  <div>Код: SANDWICH_OVERFLOW_800</div>
+  <button class="bsodbtn" id="reboot">Перезагрузить компьютер</button>
+ </div>
+</div>
+
+<div id="bootScreen">
+  <div class="boot-logo">MICHAEL-PC</div>
+  <div class="boot-company">MICHAEL COMPUTER SYSTEMS</div>
+  <div class="boot-spinner"></div>
+</div>
+
+<div id="virus-layer"></div>
+
+<div id="finalBlack"></div>
+<div id="finalText"><span id="finalTextContent"></span></div>
+<div id="finalCamera"></div>
+<div id="finalEnd"></div>
+
+</body>
+<script>
+/* ============================================================
+   GAME
+   ============================================================ */
+const GAME = {
+  login:         "Майкл",
+  password:      "1234",
+  secretIP:      "192.0.2.44",
+  newIP:         "193.05.7.444",
+  archiveDate:   "2013-07-17T00:18",
+  disappearDate: "2011-03-14T00:18",
+  crashAtWindows: 50,
+  bootDuration:  10000,
+  assistantTick: 30000
+};
+
+const STORY = {
+  disappearedDate: new Date(2011,2,14,0,18,0),
+  ownerName: "Майкл"
+};
+
+const IMAGES = {
+  receipt:  "https://lh3.googleusercontent.com/d/1dBcdu2j6WtoQ7IMwZhIao-oJ9IdnNqIV",
+  sandwich: "https://lh3.googleusercontent.com/d/1-fS2lzCQKvycE5RkcFD1VvUQpH9qdNKP",
+  eyes:     "https://lh3.googleusercontent.com/d/1TzRhHZcsv7RyOcPs012JWZzkDizNzW67",
+  webcam:   "https://lh3.googleusercontent.com/d/1YSzVEsiEZUsnhAU2k0VWaEGx2DpKf8Bv",
+  eyeIcon:  "https://lh3.googleusercontent.com/d/14739wQruTA7C8O7_7ork4h7UozPpKK5w",
+  finalCam: "https://lh3.googleusercontent.com/d/17SqrjBxCIFxY2KBUyeOwiwE_QfyHC8mw"
+};
+const SOUNDS = {
+  sandwich: "https://www.myinstants.com/media/sounds/heavy_sandwichtaunt03_ntUpmcV.mp3"
+};
+
+let z=20;
+let windowCount=0;
+let assistantTimer=null;
+let assistantStage=0;
+let assistantFinished=false;
+let assistantActive=false;
+let assistantGreeted=false;
+let receiptOpenedOnce=false;
+let virusRunning=false;
+let virusVolume=0.5;
+
+let oldSiteVisited=false;
+let newSiteVisited=false;
+let eyeFileAppeared=false;
+let level2Visited=false;
+let level4Visited=false;
+let finalTriggered=false;
+let assistantHintMode=null;
+
+let realNow=new Date();
+let virtualNow=new Date(realNow);
+let clockFromReal=true;
+
+let lupaOpen=false;
+let lupaDragging=false;
+let lupaX=200, lupaY=150, lupaDX=0, lupaDY=0;
+
+const $=id=>document.getElementById(id);
+
+function toast(t){
+  const el=$("toast");
+  el.textContent=t;
+  el.style.display="block";
+  clearTimeout(toast.t);
+  toast.t=setTimeout(()=>{el.style.display="none"},2300);
+}
+
+let audioCtx=null;
+function soundReady(){
+  if(!audioCtx){
+    try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  }
+}
+function beep(freq,dur,type="square",vol=.018){
+  try{
+    soundReady();
+    if(!audioCtx)return;
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+function playUI(kind){
+  if(kind==="open"){beep(520,.045);setTimeout(()=>beep(760,.055),45)}
+  if(kind==="close"){beep(380,.05);setTimeout(()=>beep(220,.07),45)}
+  if(kind==="type"){beep(650,.022,"square",.007)}
+  if(kind==="warn"){beep(220,.11,"sawtooth",.022);setTimeout(()=>beep(180,.13,"sawtooth",.018),100)}
+}
+
+/* ---- Звук «тук» для я вижу тебя.exe (не чаще 1 раза в 30 мс) ---- */
+let lastEyeThump=0;
+function playEyeThump(){
+  const now=performance.now();
+  if(now-lastEyeThump<30)return;
+  lastEyeThump=now;
+  try{
+    soundReady();
+    if(!audioCtx)return;
+    const t=audioCtx.currentTime;
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type="sine";o.frequency.setValueAtTime(140,t);
+    o.frequency.exponentialRampToValueAtTime(70,t+0.06);
+    g.gain.setValueAtTime(.05,t);
+    g.gain.exponentialRampToValueAtTime(.001,t+0.08);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start(t);o.stop(t+0.09);
+  }catch(e){}
+}
+
+/* ---- Гул финала ---- */
+let finalHum=null;
+function startFinalHum(){
+  try{
+    soundReady();
+    if(!audioCtx||finalHum)return;
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type="sine";o.frequency.value=60;
+    g.gain.setValueAtTime(.001,audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(.06,audioCtx.currentTime+8);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();
+    finalHum={o,g};
+  }catch(e){}
+}
+function stopFinalHum(){
+  try{
+    if(finalHum&&audioCtx){
+      finalHum.g.gain.linearRampToValueAtTime(.0001,audioCtx.currentTime+.5);
+      finalHum.o.stop(audioCtx.currentTime+.6);
+    }
+  }catch(e){}
+  finalHum=null;
+}
+
+/* ---- Белый шум камеры ---- */
+let camNoiseNode=null;
+function startCamNoise(){
+  try{
+    soundReady();
+    if(!audioCtx||camNoiseNode)return;
+    const bufSize=audioCtx.sampleRate*2;
+    const buf=audioCtx.createBuffer(1,bufSize,audioCtx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++) data[i]=(Math.random()*2-1)*0.25;
+    const src=audioCtx.createBufferSource();
+    src.buffer=buf;src.loop=true;
+    const filter=audioCtx.createBiquadFilter();
+    filter.type="lowpass";filter.frequency.value=1200;
+    const g=audioCtx.createGain();g.gain.value=0.025;
+    src.connect(filter);filter.connect(g);g.connect(audioCtx.destination);
+    src.start();
+    camNoiseNode={src,g};
+  }catch(e){}
+}
+function stopCamNoise(){
+  try{
+    if(camNoiseNode&&audioCtx){
+      camNoiseNode.g.gain.linearRampToValueAtTime(.0001,audioCtx.currentTime+.4);
+      camNoiseNode.src.stop(audioCtx.currentTime+.5);
+    }
+  }catch(e){}
+  camNoiseNode=null;
+}
+
+function playScreamer(){
+  try{
+    soundReady();
+    if(!audioCtx)return;
+    const now=audioCtx.currentTime;
+    const o1=audioCtx.createOscillator(),g1=audioCtx.createGain();
+    o1.type="square";o1.frequency.setValueAtTime(880,now);
+    g1.gain.setValueAtTime(.09,now);
+    g1.gain.exponentialRampToValueAtTime(.001,now+0.12);
+    o1.connect(g1);g1.connect(audioCtx.destination);
+    o1.start(now);o1.stop(now+0.13);
+    const bufSize=audioCtx.sampleRate*0.35;
+    const buf=audioCtx.createBuffer(1,bufSize,audioCtx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++){
+      const t=i/bufSize;
+      data[i]=(Math.random()*2-1)*Math.pow(1-t,1.5)*0.6;
+    }
+    const noise=audioCtx.createBufferSource();
+    noise.buffer=buf;
+    const filter=audioCtx.createBiquadFilter();
+    filter.type="bandpass";filter.frequency.value=1400;filter.Q.value=1.2;
+    const gN=audioCtx.createGain();
+    gN.gain.setValueAtTime(.08,now+0.05);
+    gN.gain.exponentialRampToValueAtTime(.001,now+0.4);
+    noise.connect(filter);filter.connect(gN);gN.connect(audioCtx.destination);
+    noise.start(now+0.05);noise.stop(now+0.42);
+    const o2=audioCtx.createOscillator(),g2=audioCtx.createGain();
+    o2.type="sawtooth";o2.frequency.setValueAtTime(70,now);
+    o2.frequency.exponentialRampToValueAtTime(38,now+0.5);
+    g2.gain.setValueAtTime(.07,now);
+    g2.gain.exponentialRampToValueAtTime(.001,now+0.55);
+    o2.connect(g2);g2.connect(audioCtx.destination);
+    o2.start(now);o2.stop(now+0.55);
+  }catch(e){}
+}
+
+function login(){
+  soundReady();
+  const u=$("user").value.trim().normalize("NFC").toLowerCase();
+  const p=$("pass").value.trim();
+  if(u===GAME.login.toLowerCase() && p===GAME.password){
+    $("login").classList.add("hidden");
+    $("desktop").classList.remove("hidden");
+    startAssistant();
+    toast("Вход выполнен.");
+  }else{
+    $("error").textContent="Неверное имя пользователя или пароль. Используйте: "+GAME.login+" / "+GAME.password;
+    $("pass").value="";
+  }
+}
+$("loginBtn").onclick=login;
+$("pass").onkeydown=e=>{if(e.key==="Enter")login()};
+
+function pluralDays(n){
+  const a=Math.abs(n)%100;
+  const b=a%10;
+  if(a>10&&a<20) return "дней";
+  if(b===1) return "день";
+  if(b>=2&&b<=4) return "дня";
+  return "дней";
+}
+function daysSinceDisappear(){
+  const now=clockFromReal?new Date():virtualNow;
+  return Math.floor((now.getTime()-STORY.disappearedDate.getTime())/(1000*60*60*24));
+}
+function formatDateRu(d){
+  return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()+' в '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+/* ============================================================
+   АССИСТЕНТ
+   ============================================================ */
+function startAssistant(){
+  if(assistantFinished){
+    showAssistantWindow();resetFaceToCalm();
+    $("assistantText").textContent="";
+    $("assistantStage").textContent="Состояние: спокойно";
+    assistantActive=true;return;
+  }
+  showAssistantWindow();assistantActive=true;resetFaceToCalm();
+  if(!assistantGreeted){
+    assistantGreeted=true;
+    const days=daysSinceDisappear();
+    const greeting="Добро пожаловать, Майкл. Система готова. Вас давно не было — "+days+" "+pluralDays(days)+". Последний раз вы заходили "+formatDateRu(STORY.disappearedDate)+".";
+    typeText(greeting,()=>{scheduleAssistantStage();});
+  }else{
+    typeText("С возвращением.",()=>{scheduleAssistantStage();});
+  }
+}
+function showAssistantWindow(){$("assistant").style.display="block";}
+function hideAssistantWindow(){$("assistant").style.display="none";}
+function resetFaceToCalm(){
+  const f=$("face");
+  f.className="face";
+  f.style.background="#ffd92f";
+  f.innerHTML='<div class="brow brow-l"></div><div class="brow brow-r"></div><div class="eye eye-l"></div><div class="eye eye-r"></div><div class="face-mouth"></div>';
+}
+function scheduleAssistantStage(){
+  clearInterval(assistantTimer);
+  assistantTimer=setInterval(()=>{
+    if(!assistantActive||assistantFinished||assistantHintMode||finalTriggered)return;
+    assistantStage++;assistantUpdate();
+  },GAME.assistantTick);
+}
+let typeTimer=null;
+function stopTyping(){
+  if(typeTimer){clearInterval(typeTimer);typeTimer=null;}
+  const face=$("face");if(face)face.classList.remove("talking");
+}
+function typeText(text,callback){
+  stopTyping();
+  const face=$("face"),out=$("assistantText");
+  face.classList.add("talking");out.textContent="";
+  let i=0;
+  typeTimer=setInterval(()=>{
+    out.textContent+=text[i++]||"";
+    if(i%2===0)playUI("type");
+    if(i>text.length){
+      clearInterval(typeTimer);typeTimer=null;
+      face.classList.remove("talking");
+      if(callback)callback();
+    }
+  },35);
+}
+function assistantUpdate(){
+  if(!$("assistant"))return;
+  if(assistantStage===1){playUI("warn");$("face").className="face worried";$("assistantStage").textContent="Состояние: настороженно";typeText("Вы получили всю необходимую вам информацию? Можете меня закрыть?");}
+  if(assistantStage===2){playUI("warn");$("face").className="face worried";$("assistantStage").textContent="Состояние: встревоженно";typeText("Э-э... что вы тут вообще делаете? КТО ВЫ?! Можете ли вы объяснить мне, что происходит?");}
+  if(assistantStage===3){playUI("warn");$("face").className="face angry";$("assistantStage").textContent="Состояние: очень обеспокоен";typeText("Пожалуйста... прекратите. Вам действительно больше нечего здесь делать? DSRK.XBNT RJVGM.NTH B CKJVFQNT TUJ!");}
+  if(assistantStage>=4){playUI("warn");$("face").className="face panic";$("assistantStage").textContent="Состояние: КРИТИЧЕСКОЕ";typeText("ВАС ЖДЕТ ВЕЧНАЯ АГОНИЯ ЕСЛИ ВЫ .........",()=>{setTimeout(finalAssistant,1500);});}
+}
+function finalAssistant(){
+  if(assistantFinished)return;
+  assistantFinished=true;clearInterval(assistantTimer);stopTyping();playScreamer();
+  const f=$("face");f.className="face dark";f.style.background="#000";
+  f.innerHTML='<img class="dark-img" src="'+IMAGES.eyes+'" alt="">';
+  $("assistantText").textContent="";$("assistantStage").textContent="...";
+  setTimeout(()=>{toast("SYSTEM ERROR: ASSISTENT.EXE");hideAssistantWindow();assistantActive=false;},1700);
+}
+function finalAssistantMercy(){
+  if(assistantFinished)return;
+  assistantFinished=true;clearInterval(assistantTimer);stopTyping();resetFaceToCalm();
+  $("assistantStage").textContent="Состояние: спокойно";
+  typeText("Спасибо тебе огромное, что облегчил мои страдания.",()=>{setTimeout(()=>{hideAssistantWindow();assistantActive=false;},2500);});
+}
+function assistantAutoSay(text,faceKind="worried"){
+  showAssistantWindow();assistantActive=true;clearInterval(assistantTimer);
+  resetFaceToCalm();$("face").className="face "+faceKind;
+  $("assistantStage").textContent="Состояние: настороженно";
+  typeText(text,()=>{});
+}
+$("assistantHelp").onclick=()=>{
+  if(assistantHintMode==="caesar"){assistantAutoSay("Это шифр Цезаря. Сдвиг — на семь.");return;}
+  if(assistantFinished){typeText("Осмотрись. Найди что-то ЬЧУ ЦФЕЦЙЧ ТЕЭН ИШЭН!!!. Потом я смогу помочь.");return;}
+  clearInterval(assistantTimer);
+  typeText("Осмотрись. Найди что-то ЬЧУ ЦФЕЦЙЧ ТЕЭН ИШЭН!!!. Потом я смогу помочь.",()=>{if(!assistantFinished){if(assistantStage>0)assistantStage--;scheduleAssistantStage();}});
+};
+$("assistantClose").onclick=()=>{
+  if(finalTriggered)return;
+  if(assistantFinished){hideAssistantWindow();assistantActive=false;clearInterval(assistantTimer);return;}
+  if(assistantStage>=4){
+    clearInterval(assistantTimer);stopTyping();resetFaceToCalm();
+    $("assistantStage").textContent="Состояние: спокойно";
+    typeText("Пока.",()=>{setTimeout(()=>{hideAssistantWindow();assistantActive=false;assistantStage=0;},800);});
+  }else if(assistantStage===3){finalAssistantMercy();}
+  else{
+    clearInterval(assistantTimer);stopTyping();resetFaceToCalm();
+    $("assistantStage").textContent="Состояние: спокойно";
+    typeText("Пока.",()=>{setTimeout(()=>{hideAssistantWindow();assistantActive=false;assistantStage=0;},800);});
+  }
+};
+$("helperBtn").onclick=()=>{
+  if(finalTriggered)return;
+  if(assistantActive&&$("assistant").style.display!=="none"){$("assistant").style.zIndex=++z;}
+  else{startAssistant();}
+};
+
+/* ============================================================
+   ОКНА
+   ============================================================ */
+function createWin(title,html,w=600,h=410){
+  windowCount++;playUI("open");
+  if(windowCount>=GAME.crashAtWindows){triggerCrash();}
+  const x=document.createElement("div");
+  x.className="window";
+  x.style.width=w+"px";x.style.height=h+"px";
+  x.style.left=(160+Math.random()*250)+"px";
+  x.style.top=(50+Math.random()*120)+"px";
+  x.style.zIndex=++z;
+  x.innerHTML='<div class="titlebar"><span class="caption">'+title+'</span><div class="winbuttons"><button class="winbutton min">_</button><button class="winbutton close">×</button></div></div><div class="content">'+html+"</div>";
+  $("desktop").appendChild(x);
+  x.querySelector(".close").onclick=()=>{playUI("close");x.remove();windowCount=Math.max(0,windowCount-1);};
+  x.querySelector(".min").onclick=()=>x.querySelector(".content").classList.toggle("hidden");
+  drag(x,x.querySelector(".titlebar"));
+  return x;
+}
+function drag(w,b){
+  let on=false,ox=0,oy=0;
+  b.onmousedown=e=>{on=true;const r=w.getBoundingClientRect();ox=e.clientX-r.left;oy=e.clientY-r.top;w.style.zIndex=++z;};
+  document.addEventListener("mousemove",e=>{
+    if(!on)return;
+    const d=$("desktop").getBoundingClientRect();
+    w.style.left=Math.max(0,Math.min(d.width-w.offsetWidth,e.clientX-d.left-ox))+"px";
+    w.style.top=Math.max(0,Math.min(d.height-45,e.clientY-d.top-oy))+"px";
+  });
+  document.addEventListener("mouseup",()=>on=false);
+}
+
+/* ============================================================
+   ЯРЛЫКИ
+   ============================================================ */
+document.querySelectorAll(".icon").forEach(i=>i.onclick=()=>openApp(i.dataset.app));
+$("mailTask").onclick=()=>openMail();
+$("startBtn").onclick=()=>{if(!finalTriggered)toast("Пуск — некоторые программы ещё устанавливаются.")};
+
+function openApp(a){
+  if(finalTriggered)return;
+  if(a==="computer")createWin("Мой компьютер",'<div class="inset"><b>Michael PC</b><hr>Диск C: — 12.4 GB свободно<br>Система: OLD-PC OS<br>Состояние: работает нормально.</div>',540,310);
+  if(a==="archive")ownerArchive();
+  if(a==="receipt")openReceiptViewer();
+  if(a==="mail")openMail();
+  if(a==="files")openFiles();
+  if(a==="browser")openBrowser();
+  if(a==="notes")openNotes();
+  if(a==="camera")openCamera();
+  if(a==="paint")openPaint();
+  if(a==="calc")openCalc();
+  if(a==="games")openGames();
+  if(a==="terminal")openTerminal();
+  if(a==="settings")openSettings();
+  if(a==="trash")openTrash();
+  if(a==="magnifier")openLupa();
+}
+
+function ownerArchive(){
+  createWin("Архив владельца",`<div class="archive-list"><button onclick="openUnsentLetter()">✉ Неотправленное письмо</button><button onclick="openPhoto()">📷 Фотография</button><button onclick="openDateNote()">📝 Записка с датой</button><button onclick="openIPNote()">🌐 Запись об IP-адресе</button></div><div class="archive-hint">Некоторые файлы выглядят обычными. Некоторые — нет.</div>`,470,340);
+}
+function openUnsentLetter(){createWin("Черновики — письмо",`<div class="paper"><div><b>Кому:</b> —</div><div><b>Тема:</b> Ты где?</div><hr><p>Ты купил всё, что нужно? Тащи свою задницу сюда. Он уже начинает вонять.</p><p style="color:#777">[Письмо не отправлено]</p></div>`,450,330)}
+function openPhoto(){createWin("Фото",`<div class="photo-placeholder">[ Старая фотография ]<br><small>Файл повреждён или не поддерживается.</small></div>`,470,340)}
+function openDateNote(){createWin("Записка",`<div class="paper"><p>Не забудь проверить <b>00:18</b>.</p><p>17.07.2013</p></div>`,360,260)}
+function openIPNote(){createWin("Заметка",`<div class="paper"><p>Если сайт не отвечает — ВАМ ТУТ ДЕЛАТЬ НЕЧЕГО. Время не то...</p><p><b>${GAME.secretIP}</b></p></div>`,400,280)}
+
+function openMail(){
+  const x=createWin("Почта",'<div class="row" id="m1"><b>Аукционный дом «Север»</b><br>Поздравляем с приобретением устройства...</div><div id="mb" class="hidden inset"><b>Тема:</b> Поздравляем с приобретением устройства<br><br>Уважаемый покупатель!<br><br>Поздравляем вас с приобретением устройства на нашем аукционе. Желаем приятного использования.<br><br>— Аукционный дом «Север»</div>',630,410);
+  if(x)x.querySelector("#m1").onclick=()=>{x.querySelector("#mb").classList.remove("hidden");toast("Письмо открыто")};
+}
+
+function openFiles(){
+  const x=createWin("Файлы — Диск C:",`<div class="file" id="docs"><div class="ficon">📁</div><div class="fname">Документы</div></div><div class="file" id="old"><div class="ficon">📁</div><div class="fname">OLD</div></div><div class="file"><div class="ficon">📁</div><div class="fname">System</div></div><div class="file" id="readme"><div class="ficon">📄</div><div class="fname">README.txt</div></div>`,650,420);
+  if(!x)return;
+  x.querySelector("#readme").ondblclick=()=>createWin("README.txt","<pre>Michael PC OS\\nВерсия: 0.9.10\\n\\nНекоторые старые файлы могут быть несовместимы.</pre>",460,300);
+  x.querySelector("#old").ondblclick=()=>createWin("OLD",'<div class="inset">Папка пуста.</div><p class="muted">Система сообщает именно это.</p>',420,280);
+  x.querySelector("#docs").ondblclick=()=>{
+    const y=createWin("Документы",'<div class="file"><div class="ficon">📁</div><div class="fname">Чеки</div></div>',560,360);
+    if(y)y.querySelector(".file").ondblclick=()=>{
+      const zz=createWin("Чеки",'<div class="file" id="r1"><div class="ficon">🧾</div><div class="fname">Чек_2013-07-17</div></div>',560,360);
+      if(zz)zz.querySelector("#r1").ondblclick=()=>openReceiptViewer();
+    };
+  };
+}
+function openTrash(){
+  const x=createWin("Корзина",'<div class="file" id="sandfile"><div class="ficon">🥪</div><div class="fname">сэндвич.exe</div></div><p class="muted">Файл в корзине.</p>',480,340);
+  if(x)x.querySelector("#sandfile").ondblclick=()=>{x.remove();windowCount=Math.max(0,windowCount-1);startVirus();};
+}
+
+function openReceiptViewer(){
+  const w=760,h=520;
+  const viewer=createWin("Просмотр документа — Чек_2013-07-17",`<div class="doc-viewer"><div class="doc-toolbar"><button class="oldbtn" id="zoomOut">−</button><button class="oldbtn" id="zoomIn">+</button><button class="oldbtn" id="zoomReset">100%</button><button class="oldbtn" id="panReset">Сброс</button><span class="zoomval" id="zoomVal">100%</span></div><div class="doc-stage" id="stage"><img class="doc-img" id="docimg" src="${IMAGES.receipt}" alt="Чек"><div class="doc-progress" id="prog"><span>Загрузка</span><div class="doc-progress-bar"><div class="doc-progress-fill" id="progFill"></div></div></div></div><div class="doc-status" id="status">Подготовка…</div></div>`,w,h);
+  if(!viewer)return;
+  const stage=viewer.querySelector("#stage"),img=viewer.querySelector("#docimg"),zoomVal=viewer.querySelector("#zoomVal"),progWrap=viewer.querySelector("#prog"),progFill=viewer.querySelector("#progFill"),status=viewer.querySelector("#status");
+  let scale=1,tx=0,ty=0,naturalW=0,naturalH=0;
+  const isFirst=!receiptOpenedOnce;
+  const totalMs=isFirst?9000:3000;
+  const slowMs=totalMs*2/3,fastMs=totalMs-slowMs;
+  function applyTransform(){img.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;zoomVal.textContent=Math.round(scale*100)+"%";}
+  function centerImage(){if(!naturalW||!naturalH)return;const sw=stage.clientWidth,sh=stage.clientHeight;tx=(sw-naturalW*scale)/2;ty=(sh-naturalH*scale)/2;applyTransform();}
+  function setZoom(ns){scale=Math.max(0.15,Math.min(6,ns));applyTransform();}
+  viewer.querySelector("#zoomIn").onclick=()=>setZoom(scale*1.2);
+  viewer.querySelector("#zoomOut").onclick=()=>setZoom(scale/1.2);
+  viewer.querySelector("#zoomReset").onclick=()=>{scale=1;centerImage();};
+  viewer.querySelector("#panReset").onclick=()=>centerImage();
+  stage.addEventListener("wheel",(e)=>{e.preventDefault();const rect=stage.getBoundingClientRect();const mx=e.clientX-rect.left,my=e.clientY-rect.top;const oldScale=scale;const factor=e.deltaY<0?1.12:1/1.12;scale=Math.max(0.15,Math.min(6,scale*factor));tx=mx-(mx-tx)*(scale/oldScale);ty=my-(my-ty)*(scale/oldScale);applyTransform();},{passive:false});
+  let dragging=false,sx=0,sy=0;
+  stage.addEventListener("mousedown",(e)=>{if(e.button!==0)return;dragging=true;sx=e.clientX-tx;sy=e.clientY-ty;stage.classList.add("dragging");});
+  window.addEventListener("mousemove",(e)=>{if(!dragging)return;tx=e.clientX-sx;ty=e.clientY-sy;applyTransform();});
+  window.addEventListener("mouseup",()=>{dragging=false;stage.classList.remove("dragging");});
+  function onKey(e){if(e.key==="Escape"){viewer.remove();windowCount=Math.max(0,windowCount-1);window.removeEventListener("keydown",onKey);}}
+  window.addEventListener("keydown",onKey);
+  img.addEventListener("load",()=>{
+    naturalW=img.naturalWidth||img.width;naturalH=img.naturalHeight||img.height;
+    const sw=stage.clientWidth,sh=stage.clientHeight;
+    const fit=Math.min(sw/(naturalW||1),sh/(naturalH||1),1);
+    scale=fit;centerImage();runProgress();
+  });
+  img.addEventListener("error",()=>{status.textContent="Не удалось загрузить файл.";progWrap.style.display="none";});
+  function runProgress(){
+    const startTime=performance.now();
+    function tick(now){
+      const elapsed=now-startTime;let t;
+      if(elapsed<slowMs){t=(elapsed/slowMs)*0.5;}
+      else{const e2=Math.min(fastMs,elapsed-slowMs);t=0.5+(e2/fastMs)*0.5;}
+      t=Math.min(1,t);progFill.style.width=(t*100).toFixed(1)+"%";
+      img.style.clipPath=`inset(0 0 ${(1-t)*100}% 0)`;
+      if(t<1){requestAnimationFrame(tick);}
+      else{img.style.clipPath="none";status.textContent="Загружено.";setTimeout(()=>{progWrap.style.display="none";},400);receiptOpenedOnce=true;}
+    }
+    img.style.clipPath="inset(0 0 100% 0)";
+    requestAnimationFrame(tick);
+  }
+  stage.addEventListener("dblclick",()=>centerImage());
+}
+
+function openPaint(){
+  const x=createWin("Paint",`<div class="paint-toolbar"><button class="oldbtn" id="pBrush">✏️</button><button class="oldbtn" id="pEraser">🧽</button><label style="font-size:12px">Размер: <input id="pSize" type="range" min="1" max="40" value="4" style="width:80px;vertical-align:middle"></label><button class="oldbtn" id="pClear">Очистить</button><div class="paint-colors" id="pColors"></div></div><canvas id="pCanvas" class="paint-canvas" width="700" height="380"></canvas>`,740,470);
+  if(!x)return;
+  const canvas=x.querySelector("#pCanvas"),ctx=canvas.getContext("2d");
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
+  let mode="brush",color="#000000",size=4;
+  const colors=["#000000","#ffffff","#ff0000","#00aa00","#0000ff","#ffaa00","#aa00aa","#00aaaa","#884400","#666666"];
+  const colorBox=x.querySelector("#pColors");
+  colors.forEach((c,i)=>{
+    const b=document.createElement("div");
+    b.className="paint-color"+(i===0?" active":"");
+    b.style.background=c;
+    b.onclick=()=>{color=c;colorBox.querySelectorAll(".paint-color").forEach(el=>el.classList.remove("active"));b.classList.add("active");};
+    colorBox.appendChild(b);
+  });
+  x.querySelector("#pBrush").onclick=()=>{mode="brush";};
+  x.querySelector("#pEraser").onclick=()=>{mode="eraser";};
+  x.querySelector("#pSize").oninput=(e)=>{size=+e.target.value;};
+  x.querySelector("#pClear").onclick=()=>{ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);};
+  let drawing=false,lastX=0,lastY=0;
+  canvas.addEventListener("mousedown",(e)=>{drawing=true;const r=canvas.getBoundingClientRect();lastX=e.clientX-r.left;lastY=e.clientY-r.top;});
+  canvas.addEventListener("mousemove",(e)=>{if(!drawing)return;const r=canvas.getBoundingClientRect();const cx=e.clientX-r.left,cy=e.clientY-r.top;ctx.strokeStyle=mode==="eraser"?"#ffffff":color;ctx.lineWidth=size;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(cx,cy);ctx.stroke();lastX=cx;lastY=cy;});
+  canvas.addEventListener("mouseup",()=>drawing=false);
+  canvas.addEventListener("mouseleave",()=>drawing=false);
+}
+
+function openCalc(){
+  const x=createWin("Калькулятор",`<div class="calc"><div class="calc-display" id="cDisp">0</div><div class="calc-grid"><button id="cC">C</button><button id="cCE">CE</button><button class="op" id="cDiv">÷</button><button class="op" id="cMul">×</button><button id="c7">7</button><button id="c8">8</button><button id="c9">9</button><button class="op" id="cSub">−</button><button id="c4">4</button><button id="c5">5</button><button id="c6">6</button><button class="op" id="cAdd">+</button><button id="c1">1</button><button id="c2">2</button><button id="c3">3</button><button class="op" id="cEq">=</button><button id="c0" style="grid-column:span 2">0</button><button id="cDot">.</button><button id="cSign">±</button></div></div>`,300,460);
+  if(!x)return;
+  const disp=x.querySelector("#cDisp");
+  let cur="0",prev=null,op=null,justEval=false;
+  function upd(){disp.textContent=cur;}
+  function num(n){if(justEval){cur=n;justEval=false;}else cur=cur==="0"?n:cur+n;upd();}
+  function setOp(newOp){if(op&&prev!==null){evalNow();}prev=parseFloat(cur);op=newOp;justEval=true;}
+  function evalNow(){if(op===null||prev===null)return;const b=parseFloat(cur);let r=prev;if(op==="+")r=prev+b;if(op==="-")r=prev-b;if(op==="*")r=prev*b;if(op==="/")r=b===0?"ERROR":prev/b;cur=typeof r==="number"?String(Math.round(r*1e10)/1e10):r;prev=null;op=null;justEval=true;upd();}
+  for(let i=0;i<=9;i++)x.querySelector("#c"+i).onclick=()=>num(String(i));
+  x.querySelector("#cDot").onclick=()=>{if(!cur.includes(".")){cur+=".";justEval=false;upd();}};
+  x.querySelector("#cAdd").onclick=()=>setOp("+");
+  x.querySelector("#cSub").onclick=()=>setOp("-");
+  x.querySelector("#cMul").onclick=()=>setOp("*");
+  x.querySelector("#cDiv").onclick=()=>setOp("/");
+  x.querySelector("#cEq").onclick=()=>evalNow();
+  x.querySelector("#cC").onclick=()=>{cur="0";prev=null;op=null;justEval=false;upd();};
+  x.querySelector("#cCE").onclick=()=>{cur="0";justEval=false;upd();};
+  x.querySelector("#cSign").onclick=()=>{if(cur!=="0"){cur=cur.startsWith("-")?cur.slice(1):"-"+cur;upd();}};
+}
+
+let virusAudio=null;
+function getVirusAudio(){
+  if(!virusAudio){virusAudio=new Audio(SOUNDS.sandwich);virusAudio.volume=virusVolume;virusAudio.preload="auto";}
+  return virusAudio;
+}
+function playSandwichSound(){try{const a=getVirusAudio();const c=a.cloneNode();c.volume=virusVolume;c.play().catch(()=>{});}catch(e){}}
+function startVirus(){if(virusRunning)return;virusRunning=true;setTimeout(()=>{showVirusWarn();},4000);}
+function showVirusWarn(){
+  const w=$("virusWarn");w.classList.add("show");
+  const slider=$("virusVol"),volLabel=$("virusVolVal");
+  slider.value=Math.round(virusVolume*100);volLabel.textContent=Math.round(virusVolume*100)+"%";
+  slider.oninput=()=>{virusVolume=+slider.value/100;volLabel.textContent=slider.value+"%";};
+  slider.onchange=()=>{playSandwichSound();};
+  $("virusWarnOk").onclick=()=>{w.classList.remove("show");spawnSandwichWave();};
+}
+function spawnSandwichWave(){
+  const layer=$("virus-layer");layer.innerHTML="";
+  let count=0;const MAX=800;let interval=800;
+  function schedule(){
+    if(count>=MAX)return;
+    const img=document.createElement("img");
+    img.className="virus-sandwich";img.src=IMAGES.sandwich;
+    const w=window.innerWidth,h=window.innerHeight;
+    const size=120+Math.random()*140;
+    img.style.width=size+"px";img.style.height=size+"px";
+    img.style.left=(Math.random()*(w-size))+"px";
+    img.style.top=(Math.random()*(h-size))+"px";
+    layer.appendChild(img);playSandwichSound();count++;
+    interval=Math.max(12,interval*0.968);
+    if(count>=MAX){setTimeout(triggerVirusBSOD,300);return;}
+    setTimeout(schedule,interval);
+  }
+  schedule();
+}
+function triggerVirusBSOD(){
+  document.body.classList.add("crashed");
+  $("desktop").classList.add("crashing");playUI("warn");
+  setTimeout(()=>{
+    $("bsod").classList.add("show");
+    const btn=$("reboot");
+    btn.onclick=()=>{btn.classList.remove("broken");void btn.offsetWidth;btn.classList.add("broken");};
+  },700);
+}
+function triggerCrash(){
+  if(document.body.classList.contains("crashed"))return;
+  document.body.classList.add("crashed");
+  $("desktop").classList.add("crashing");playUI("warn");
+  setTimeout(()=>{$("bsod").classList.add("show");},850);
+}
+
+function formatVirtual(){
+  const d=virtualNow;
+  return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function isoVirtual(){
+  const d=virtualNow;
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+/* ---------- БРАУЗЕР ---------- */
+function openBrowser(){
+  const x=createWin("Браузер",'<div class="browserbar"><input id="addr" placeholder="Адрес сайта или IP"><button class="oldbtn" id="go">Перейти</button></div><div class="inset" id="br">Сеть: ВИРТУАЛЬНАЯ<br><br>Введите адрес и нажмите «Перейти».</div>',650,390);
+  if(!x)return;
+  const addr=x.querySelector("#addr"),br=x.querySelector("#br");
+  x.querySelector("#go").onclick=()=>{
+    playUI("open");const a=addr.value.trim();
+    if(a===GAME.secretIP||a==='http://'+GAME.secretIP){
+      const now=isoVirtual();
+      if(now===GAME.archiveDate){
+        br.innerHTML='<div class="site"><h2>ARCHIVE // 17.07.2013</h2><p>Архивная копия сайта.</p><p>Некоторые материалы удалены владельцем.</p><hr><p><b>«Если ты это читаешь, значит, время всё ещё работает. Думаю, тебе следует посетить этот сайт 193.05.7.444. Мало ли, что сможешь тут найти.»</b></p><p class="muted">Последнее обновление: 00:18</p></div>';
+        if(!oldSiteVisited){oldSiteVisited=true;setTimeout(()=>{assistantAutoSay("Как вы смогли открыть этот сайт? Он ведь был удалён очень давно.");},3000);}
+      }else if(now===GAME.disappearDate){
+        br.innerHTML='<div class="site"><h2>АРХИВ НОВОСТЕЙ — 14.03.2011</h2><p>В городе стал орудовать некий культ. Полиция настоятельно рекомендует не задерживаться на улице до позднего.</p><p>За дальнейшими инструкциями обратитесь...................</p></div>';
+      }else{
+        br.innerHTML='<div class="site"><h2>САЙТ НЕ РАБОТАЕТ</h2><p>Сервер отключён.</p><p class="muted">Текущая дата системы: '+formatVirtual()+'</p></div>';
+      }
+    }else if(a===GAME.newIP||a==='http://'+GAME.newIP){
+      openLevel1();
+    }else{
+      br.innerHTML='<div class="site"><h2>СТРАНИЦА НЕ НАЙДЕНА</h2><p>Сервер не отвечает.</p></div>';
+    }
+  };
+}
+
+/* ============ УРОВЕНЬ 1 ============ */
+function openLevel1(){
+  const w=900,h=600;
+  const viewer=createWin("Сайт 193.05.7.444 — ???","",w,h);
+  if(!viewer)return;
+  viewer.style.width=w+"px";viewer.style.height=h+"px";
+  viewer.querySelector(".content").style.padding="0";
+  viewer.querySelector(".content").style.background="#1a0000";
+  viewer.querySelector(".content").innerHTML=`<div class="sect-site"><div class="sect-symbol" style="top:40px;left:60px;">✠</div><div class="sect-symbol" style="top:120px;right:80px;">◉</div><div class="sect-symbol" style="bottom:80px;left:120px;">✟</div><div class="sect-symbol" style="bottom:140px;right:160px;">◯</div><div class="sect-symbol" style="top:50%;left:50%;transform:translate(-50%,-50%);font-size:220px;opacity:.06;">⛧</div><h1>LF LF LF LFFF</h1><div class="sect-text">CDJ,JLB VTYZ , Z CKBIRJV LJKUJ ,SK D PFNJXTYBB</div><div class="sect-form"><input type="text" id="c1" placeholder="Введите код" maxlength="60" autocomplete="off"><button id="b1">Проверить</button></div><div class="sect-msg" id="m1"></div></div>`;
+  if(!newSiteVisited){newSiteVisited=true;setTimeout(()=>{spawnEyeFile();},4000);}
+  viewer.querySelector("#b1").onclick=()=>{
+    const code=viewer.querySelector("#c1").value.trim().toLowerCase();
+    const msg=viewer.querySelector("#m1");
+    if(!code){msg.textContent="Введите код.";return;}
+    if(code==="код"){msg.textContent="Верно.";playUI("open");setTimeout(()=>{viewer.remove();windowCount=Math.max(0,windowCount-1);openLevel2();},800);}
+    else{msg.textContent="Неверно.";playUI("warn");}
+  };
+}
+
+/* ============ УРОВЕНЬ 2 ============ */
+function openLevel2(){
+  const w=900,h=600;
+  const viewer=createWin("Сайт 193.05.7.444 — ???","",w,h);
+  if(!viewer)return;
+  viewer.style.width=w+"px";viewer.style.height=h+"px";
+  viewer.querySelector(".content").style.padding="0";
+  viewer.querySelector(".content").style.background="#1a0000";
+  viewer.querySelector(".content").innerHTML=`<div class="sect-site glitchy"><div class="sect-symbol" style="top:40px;left:60px;">✠</div><div class="sect-symbol" style="top:120px;right:80px;">◉</div><div class="sect-symbol" style="bottom:80px;left:120px;">✟</div><div class="sect-symbol" style="bottom:140px;right:160px;">◯</div><h1>RJVGM.NTH LJK;TY ,SNM GHJCNJ</h1><div class="sect-text">щлзл илкг дщхщ схуцгещлч кхшщжтшё фл цчхшщх щжс , ё илкг цчжи ? шсжнлщ щв лйх ивсъцпт , хщсъкж щх щхтгсх фжоижфпл ожзвт ... жъсэпхффвр кху ...</div><div class="sect-form"><input type="text" id="c2" placeholder="Введите код" maxlength="60" autocomplete="off"><button id="b2">Проверить</button></div><div class="sect-msg" id="m2"></div></div>`;
+  if(!level2Visited){level2Visited=true;assistantHintMode="caesar";setTimeout(()=>{assistantAutoSay("Стоит ли продолжать?");},2000);}
+  viewer.querySelector("#b2").onclick=()=>{
+    const code=viewer.querySelector("#c2").value.trim().toLowerCase();
+    const msg=viewer.querySelector("#m2");
+    if(!code){msg.textContent="Введите код.";return;}
+    if(code==="север"){msg.textContent="Верно.";playUI("open");setTimeout(()=>{viewer.remove();windowCount=Math.max(0,windowCount-1);openLevel3();},800);}
+    else{msg.textContent="Неверно.";playUI("warn");}
+  };
+}
+
+/* ============ УРОВЕНЬ 3 ============ */
+function openLevel3(){
+  const w=900,h=600;
+  const viewer=createWin("Сайт 193.05.7.444 — ???","",w,h);
+  if(!viewer)return;
+  viewer.style.width=w+"px";viewer.style.height=h+"px";
+  viewer.querySelector(".content").style.padding="0";
+  viewer.querySelector(".content").style.background="#1a0000";
+  viewer.querySelector(".content").innerHTML=`<div class="sect-site glitchy2"><div class="sect-symbol" style="top:40px;left:60px;">✠</div><div class="sect-symbol" style="top:120px;right:80px;">◉</div><div class="sect-symbol" style="bottom:80px;left:120px;">✟</div><div class="sect-symbol" style="bottom:140px;right:160px;">◯</div><h1>11010001 10000001 11010000 10110010 ...</h1><div class="sect-bin">11010001 10000001 11010000 10110010 11010000 10111110 11010000 10110001 11010000 10111110 11010000 10110100 11010000 10110000 00100000 11010000 10111100 11010000 10111101 11010000 10110101 00100000</div><div class="sect-form"><input type="text" id="c3" placeholder="Введите код" maxlength="60" autocomplete="off"><button id="b3">Проверить</button></div><div class="sect-msg" id="m3"></div></div>`;
+  viewer.querySelector("#b3").onclick=()=>{
+    const code=viewer.querySelector("#c3").value.trim().toLowerCase().replace(/\s+/g," ");
+    const msg=viewer.querySelector("#m3");
+    if(!code){msg.textContent="Введите код.";return;}
+    if(code==="свобода мне"||code==="свобода"){msg.textContent="Верно.";playUI("open");setTimeout(()=>{viewer.remove();windowCount=Math.max(0,windowCount-1);openLevel4();},800);}
+    else{msg.textContent="Неверно.";playUI("warn");}
+  };
+}
+
+/* ============ УРОВЕНЬ 4 ============ */
+let level4Errors=0;
+function openLevel4(){
+  const w=900,h=600;
+  const viewer=createWin("Сайт 193.05.7.444 — ???","",w,h);
+  if(!viewer)return;
+  viewer.style.width=w+"px";viewer.style.height=h+"px";
+  viewer.querySelector(".content").style.padding="0";
+  viewer.querySelector(".content").style.background="#1a0000";
+  viewer.querySelector(".content").innerHTML=`<div class="sect-site glitchy2"><div class="sect-symbol" style="top:40px;left:60px;">✠</div><div class="sect-symbol" style="top:120px;right:80px;">◉</div><div class="sect-symbol" style="bottom:80px;left:120px;">✟</div><div class="sect-symbol" style="bottom:140px;right:160px;">◯</div><h1>⠛⠕⠞⠕⠺ ⠏⠗⠊⠎⠕⠑⠙⠊⠝⠊⠞⠾⠎⠫ ⠅ ⠝⠁⠍ ⠢</h1><div class="sect-braille">⠛⠕⠞⠕⠺ ⠏⠗⠊⠎⠕⠑⠙⠊⠝⠊⠞⠾⠎⠫ ⠅ ⠝⠁⠍ ⠢</div><div class="sect-form"><input type="text" id="c4" placeholder="Введите код" maxlength="60" autocomplete="off"><button id="b4">Проверить</button></div><div class="sect-msg" id="m4"></div></div>`;
+  level4Visited=true;
+  viewer.querySelector("#b4").onclick=()=>{
+    const inputEl=viewer.querySelector("#c4");
+    const code=inputEl.value.trim().toLowerCase();
+    const msg=viewer.querySelector("#m4");
+    if(!code){msg.textContent="Введите код.";return;}
+    if(code==="да"){msg.textContent="Верно.";playUI("open");setTimeout(()=>{viewer.remove();windowCount=Math.max(0,windowCount-1);startFinale();},800);}
+    else{
+      level4Errors++;msg.textContent="Неверно.";playUI("warn");
+      if(level4Errors>=4){
+        inputEl.value="да";inputEl.classList.add("wrong");
+        setTimeout(()=>{viewer.remove();windowCount=Math.max(0,windowCount-1);startFinale();},2000);
+      }
+    }
+  };
+}
+
+/* ============ я вижу тебя.exe ============ */
+function spawnEyeFile(){
+  if(eyeFileAppeared)return;
+  eyeFileAppeared=true;
+  const icon=document.createElement("div");
+  icon.className="icon eyeFile";
+  icon.style.position="absolute";
+  icon.style.left="50%";icon.style.top="50%";
+  icon.style.transform="translate(-50%,-50%)";
+  icon.style.zIndex="6";
+  icon.innerHTML='<div class="pic" style="background:transparent;font-size:0;"><img src="'+IMAGES.eyeIcon+'" style="width:48px;height:48px;object-fit:contain;image-rendering:pixelated;" alt=""></div><span>я вижу тебя.exe</span>';
+  $("desktop").appendChild(icon);
+  playEyeThump();
+  bindEyeClick(icon);
+  setTimeout(()=>{spawnRandomEye();spawnRandomEye();},1000);
+  setTimeout(()=>{assistantAutoSay("Что за странная программа появилась на вашем рабочем столе?");},600);
+}
+function spawnRandomEye(){
+  const icon=document.createElement("div");
+  icon.className="icon eyeFile";
+  icon.style.position="absolute";
+  const w=window.innerWidth,h=window.innerHeight;
+  const x=100+Math.random()*(w-260);
+  const y=80+Math.random()*(h-260);
+  icon.style.left=x+"px";icon.style.top=y+"px";icon.style.zIndex="6";
+  icon.innerHTML='<div class="pic" style="background:transparent;font-size:0;"><img src="'+IMAGES.eyeIcon+'" style="width:48px;height:48px;object-fit:contain;image-rendering:pixelated;" alt=""></div><span>я вижу тебя.exe</span>';
+  $("desktop").appendChild(icon);
+  playEyeThump();
+  bindEyeClick(icon);
+}
+function bindEyeClick(icon){
+  icon.onclick=()=>{icon.classList.remove("eyeShake");void icon.offsetWidth;icon.classList.add("eyeShake");playUI("warn");};
+  icon.addEventListener("mousedown",(e)=>{e.preventDefault();});
+}
+
+/* ============ ФИНАЛ ============ */
+function startFinale(){
+  if(finalTriggered)return;
+  finalTriggered=true;
+  clearInterval(assistantTimer);
+  document.querySelectorAll(".window").forEach(w=>{
+    if(!w.contains($("assistant")))w.remove();
+  });
+  windowCount=0;
+  if(lupaOpen)closeLupa();
+  const f=$("face");
+  f.className="face dark";f.style.background="#000";
+  f.innerHTML='<img class="dark-img" src="'+IMAGES.eyes+'" alt="">';
+  $("assistantText").textContent="";$("assistantStage").textContent="...";
+  showAssistantWindow();
+  setTimeout(()=>{
+    typeText("Мне жаль...",()=>{
+      setTimeout(spawnFinalEyeWave,1500);
+    });
+  },2000);
+}
+function spawnFinalEyeWave(){
+  startFinalHum();
+  const MAX=1000;let count=0;let interval=600;
+  function schedule(){
+    if(count>=MAX)return;
+    const icon=document.createElement("div");
+    icon.className="icon eyeFile";
+    icon.style.position="absolute";
+    const w=window.innerWidth,h=window.innerHeight;
+    const x=40+Math.random()*(w-140);
+    const y=40+Math.random()*(h-140);
+    icon.style.left=x+"px";icon.style.top=y+"px";icon.style.zIndex="6";
+    icon.style.pointerEvents="none";
+    icon.innerHTML='<div class="pic" style="background:transparent;font-size:0;"><img src="'+IMAGES.eyeIcon+'" style="width:48px;height:48px;object-fit:contain;image-rendering:pixelated;" alt=""></div><span>я вижу тебя.exe</span>';
+    $("desktop").appendChild(icon);
+    playEyeThump();
+    count++;
+    interval=Math.max(8,interval*0.968);
+    if(count>=MAX){stopFinalHum();setTimeout(showFinalBlack,500);return;}
+    setTimeout(schedule,interval);
+  }
+  schedule();
+}
+function showFinalBlack(){
+  $("finalBlack").classList.add("show");
+  hideAssistantWindow();
+  setTimeout(typeFinalText,2000);
+}
+function typeFinalText(){
+  const text="Не хочешь взглянуть на себя?";
+  const el=$("finalTextContent");
+  el.textContent="";
+  $("finalText").classList.add("show");
+  let i=0;
+  const t=setInterval(()=>{
+    el.textContent+=text[i++]||"";
+    if(i>text.length){clearInterval(t);setTimeout(showFinalCamera,1000);}
+  },300);
+}
+function showFinalCamera(){
+  const cam=$("finalCamera");
+  cam.innerHTML=`
+    <div class="cam-wrap">
+      <img class="cam-img" src="${IMAGES.finalCam}" alt="">
+      <div class="cam-noise"></div>
+      <div class="cam-scan"></div>
+      <div class="cam-vignette"></div>
+      <div class="cam-rec">REC</div>
+      <div class="cam-live">LIVE</div>
+      <div class="cam-time" id="finalCamTime">00:00</div>
+    </div>`;
+  cam.classList.add("show");
+  startCamNoise();
+  const start=Date.now();
+  const timeEl=$("finalCamTime");
+  const tTick=setInterval(()=>{
+    const el=Math.floor((Date.now()-start)/1000);
+    const mm=String(Math.floor(el/60)).padStart(2,"0");
+    const ss=String(el%60).padStart(2,"0");
+    timeEl.textContent=mm+":"+ss;
+  },250);
+  setTimeout(()=>{
+    clearInterval(tTick);
+    stopCamNoise();
+    cam.classList.remove("show");
+    $("finalText").classList.remove("show");
+    setTimeout(showFinalEnd,2000);
+  },6000);
+}
+function showFinalEnd(){
+  $("finalEnd").textContent="Это конец... пока что";
+  $("finalEnd").classList.add("show");
+}
+
+/* ============ ПРОЧЕЕ ============ */
+function openNotes(){createWin("Блокнот",'<div class="inset"><textarea style="width:100%;height:160px" placeholder="Пока здесь ничего нет..."></textarea></div>',560,390)}
+function openCamera(){createWin("Веб-камера",'<div class="camera"><img class="camera-image" src="'+IMAGES.webcam+'" alt=""><div class="camera-noise"></div><div class="camera-glitch"></div><div class="camera-rec">● REC</div></div><div class="camera-status">CAM-01 // LIVE</div>',700,430)}
+function openSettings(){
+  const val=isoVirtual();
+  const x=createWin("Настройки",'<div class="inset"><div class="row">Экран — 800×600</div><div class="row">Звук — включён</div><div class="row">Сеть — виртуальная</div><div class="row">Веб-камера — подключена</div><hr><div class="row"><b>Дата и время (внутриигровые)</b><br><small>Это НЕ меняет часы вашего компьютера.</small><br><input id="vdate" type="datetime-local" value="'+val+'" style="margin-top:7px"><button class="oldbtn" id="saveDate" style="margin-left:5px">Применить</button><button class="oldbtn" id="resetDate" style="margin-left:5px">Реальное</button><div id="dateMsg" class="muted" style="margin-top:7px">Текущие игровые часы: '+formatVirtual()+'</div></div></div>',540,440);
+  if(!x)return;
+  x.querySelector("#saveDate").onclick=()=>{const v=x.querySelector("#vdate").value;if(!v)return;virtualNow=new Date(v);clockFromReal=false;updateClock();x.querySelector("#dateMsg").textContent="Текущие игровые часы: "+formatVirtual();toast("Дата изменена.");};
+  x.querySelector("#resetDate").onclick=()=>{clockFromReal=true;virtualNow=new Date();updateClock();x.querySelector("#vdate").value=isoVirtual();x.querySelector("#dateMsg").textContent="Текущие игровые часы: "+formatVirtual();};
+}
+function openTerminal(){
+  const x=createWin("Терминал",'<div class="terminal"><div id="out">OLD-PC TERMINAL<br>Введите help.</div><br>&gt; <input id="cmd" autocomplete="off"></div>',650,390);
+  if(!x)return;
+  const i=x.querySelector("#cmd"),o=x.querySelector("#out");
+  i.onkeydown=e=>{if(e.key!=="Enter")return;const c=i.value.trim().toLowerCase();if(c==="help")o.textContent="help — список\nstatus — состояние\nclear — очистить";else if(c==="status")o.textContent="SYSTEM: ONLINE\\nNETWORK: OFFLINE\\nCAMERA: READY";else if(c==="clear")o.textContent="";else o.textContent="Неизвестная команда.";i.value="";};
+  setTimeout(()=>i.focus(),50);
+}
+function openGames(){
+  const x=createWin("Игры",'<div class="row" id="snake">▦ Змейка</div><div class="row" id="tetris">▦ Тетрис</div>',400,300);
+  if(!x)return;
+  x.querySelector("#snake").onclick=()=>toast("Змейка — скоро.");
+  x.querySelector("#tetris").onclick=()=>toast("Тетрис — скоро.");
+}
+
+function updateClock(){ $("clock").textContent=virtualNow.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}); }
+function clock(){ if(clockFromReal){virtualNow=new Date();}else{virtualNow.setSeconds(virtualNow.getSeconds()+1);} updateClock(); }
+setInterval(clock,1000); updateClock();
+
+$("reboot").onclick=()=>{
+  if(virusRunning||finalTriggered)return;
+  playUI("open");
+  document.body.classList.remove("crashed");
+  $("bsod").classList.remove("show");
+  $("desktop").classList.remove("crashing");
+  document.querySelectorAll(".window").forEach(w=>w.remove());
+  windowCount=0;z=20;bootComputer();
+};
+
+function bootComputer(){
+  $("login").classList.add("hidden");
+  $("desktop").classList.add("hidden");
+  $("bsod").classList.remove("show");
+  $("desktop").classList.remove("crashing");
+  document.body.classList.remove("crashed");
+  const boot=$("bootScreen");
+  const logo=boot.querySelector(".boot-logo"),company=boot.querySelector(".boot-company"),spinner=boot.querySelector(".boot-spinner");
+  logo.style.visibility="hidden";company.style.visibility="hidden";spinner.style.visibility="hidden";
+  spinner.classList.remove("fast");
+  boot.classList.add("show");
+  setTimeout(()=>{logo.style.visibility="visible";company.style.visibility="visible";spinner.style.visibility="visible";},5000);
+  setTimeout(()=>{spinner.classList.add("fast");},8000);
+  setTimeout(()=>{spinner.classList.remove("fast");boot.classList.remove("show");$("login").classList.remove("hidden");$("user").value="";$("pass").value="";$("error").textContent="";},GAME.bootDuration);
+}
+
+window.addEventListener("load",()=>setTimeout(bootComputer,250));
+</script>
+</body>
+</html>
